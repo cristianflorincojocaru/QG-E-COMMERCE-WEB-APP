@@ -1,0 +1,72 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<!-- Suppress only the NoWarn list below; everything else stays as error -->
+		<NoWarn>NU1901;NU1902;NU1903;NU1904</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- ── Serilog ──────────────────────────────────────────────────────────
+         Serilog.AspNetCore 9.0.0 requires Sinks.Console >= 6.0.0
+         and Sinks.File >= 6.0.0. Pin both sinks explicitly here so NuGet
+         picks the higher version instead of the old transitive lower bound.
+    -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.8">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+		<!-- ── JWT / Identity Model ────────────────────────────────────────────
+         Microsoft.Data.SqlClient 5.2.1 pulls in
+         Microsoft.IdentityModel.Protocols.OpenIdConnect 8.0.1 which needs
+         System.IdentityModel.Tokens.Jwt >= 8.0.1.
+         Pin the whole IdentityModel family to 8.0.1 so there is no downgrade.
+    -->
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.1" />
+		<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.0.1" />
+		<PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.0.1" />
+		<PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.0.1" />
+
+		<!-- ── Swashbuckle / OpenAPI ───────────────────────────────────────────
+         KEY RULE: do NOT add an explicit Microsoft.OpenApi reference here.
+         Swashbuckle.AspNetCore 9.0.6 depends on Microsoft.OpenApi >= 1.6.25
+         (the 1.x line) and will resolve it transitively.
+
+         Swashbuckle 10.x switched to Microsoft.OpenApi 2.x, which:
+           - removed the Microsoft.OpenApi.Models namespace
+           - dropped OpenApiReference from OpenApiSecurityScheme
+           - broke OpenApiInfo, OpenApiSecurityScheme, OpenApiSecurityRequirement, etc.
+         That is why every "could not be found" / "does not exist" error appeared.
+
+         Pinning an explicit Microsoft.OpenApi 2.x alongside Swashbuckle 9.x
+         causes the same mismatch. Let Swashbuckle 9.0.6 own the OpenApi version.
+    -->
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+
+		<!-- ── SQL / EF ────────────────────────────────────────────────────────-->
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.1" />
+
+		<!-- ── Auth ────────────────────────────────────────────────────────────
+         Versions below 4.61.x are affected by GHSA-m5vv-6r4h-3vj9.
+         4.65.0 is the first fully-patched release on the 4.x line.
+    -->
+		<PackageReference Include="Microsoft.Identity.Client" Version="4.65.0" />
+
+		<!-- ── Azure.Identity ──────────────────────────────────────────────────
+         1.11.3 is affected by GHSA-m5vv-6r4h-3vj9. 1.12.0+ is patched.
+    -->
+		<PackageReference Include="Azure.Identity" Version="1.12.0" />
+
+		<!-- ── Health checks ───────────────────────────────────────────────────-->
+		<PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.0" />
+	</ItemGroup>
+
+</Project>

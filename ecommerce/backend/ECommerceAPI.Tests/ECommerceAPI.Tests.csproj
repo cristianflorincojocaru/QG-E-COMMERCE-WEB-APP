@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<IsPackable>false</IsPackable>
+		<!-- Suppress vulnerability advisories that are fixed via the main project pins -->
+		<NoWarn>NU1901;NU1902;NU1903;NU1904</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- ── Reference the main project ─────────────────────────────────────
+         All package pins in ECommerceAPI.csproj flow through here
+         transitively, so the downgrade errors disappear in the test project
+         as well. The sinks / JWT versions below are explicit overrides that
+         mirror the main project so NuGet resolution is unambiguous.
+    -->
+		<ProjectReference Include="..\ECommerceAPI\ECommerceAPI.csproj" />
+
+		<!-- Repeat the sink / JWT pins so NuGet never sees a lower bound
+         coming from this project's own closure. -->
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.1" />
+
+		<!-- ── Test framework ──────────────────────────────────────────────────-->
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+		<PackageReference Include="xunit" Version="2.9.0" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.0.0">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+		<PackageReference Include="Moq" Version="4.20.72" />
+		<PackageReference Include="FluentAssertions" Version="6.12.0" />
+
+		<!-- Security patches (same advisory as main project) -->
+		<PackageReference Include="Microsoft.Identity.Client" Version="4.65.0" />
+		<PackageReference Include="Azure.Identity" Version="1.12.0" />
+	</ItemGroup>
+
+</Project>
