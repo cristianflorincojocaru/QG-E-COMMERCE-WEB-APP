@@ -8,7 +8,7 @@ import { RouterLink }  from '@angular/router';
   template: `
     <section class="hero">
       <div class="hero-content">
-        <p class="eyebrow">New Collection · 2025</p>
+        <p class="eyebrow">New Collection · 2026</p>
         <h1>Wear What<br>Matters.</h1>
         <p class="sub">Curated fashion from around the world — delivered with care.</p>
         <a routerLink="/products" class="hero-cta">Explore Collection</a>
@@ -68,10 +68,28 @@ import { RouterLink }  from '@angular/router';
       background: var(--bg-dark); color: var(--text-light);
       padding: 1rem 2.5rem; font-size: .85rem;
       letter-spacing: .15em; text-transform: uppercase; text-decoration: none;
-      transition: background .25s, transform .25s;
+      position: relative; overflow: hidden;
+      transition: background .25s, transform .25s, box-shadow .25s;
       animation: fadeUp .6s .3s ease both;
     }
-    .hero-cta:hover { background: var(--accent); transform: translateY(-2px); }
+    .hero-cta::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.18) 50%, transparent 70%);
+      animation: shimmer 2.4s ease-in-out infinite;
+    }
+    .hero-cta:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(212,168,83,.35);
+    }
+    @keyframes shimmer {
+      0%   { left: -100%; }
+      60%  { left: 160%; }
+      100% { left: 160%; }
+    }
 
     /* Geometric decoration */
     .hero-visual { position: relative; height: 500px; }

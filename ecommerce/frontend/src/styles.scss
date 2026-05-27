@@ -9,17 +9,16 @@
 /* ── CSS Variables (Design Tokens) ────────────────────────────────────────── */
 :root {
   /* Colors */
-  --bg:          #FAFAF8;   /* warm off-white background */
-  --bg-dark:     #1A1A1A;   /* deep charcoal nav / CTA */
-  --bg-muted:    #F0EEE9;   /* subtle muted background for images */
-  --text:        #2C2C2C;   /* primary text */
-  --text-light:  #F5F5F0;   /* text on dark backgrounds */
-  --text-muted:  #888580;   /* secondary text */
-  --accent:      #C5973A;   /* amber gold accent */
+  --bg:          #FAFAF8;
+  --bg-dark:     #1A1A1A;
+  --bg-muted:    #F0EEE9;
+  --text:        #2C2C2C;
+  --text-light:  #F5F5F0;
+  --text-muted:  #888580;
+  --accent:      #C5973A;
   --accent-light: rgba(197, 151, 58, .12);
-  --border:      #E8E4DF;   /* subtle borders */
+  --border:      #E8E4DF;
 
-  /* Typography */
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body:    'DM Sans', system-ui, sans-serif;
 }
@@ -38,21 +37,36 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Angular View Transitions (page-level fade) ────────────────────────────── */
-::view-transition-old(root) {
-  animation: fade-out .2s ease both;
-}
-::view-transition-new(root) {
-  animation: fade-in .25s ease both;
-}
-@keyframes fade-out {
-  to { opacity: 0; transform: translateY(-8px); }
-}
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
+/* ── Page transition ───────────────────────────────────────────────────────── */
+/*
+  Angular's router injects each routed component as a direct child of <main>.
+  Targeting those elements with a CSS animation is the safest approach —
+  no Angular Animations module involved, zero risk of blank-page bugs.
+  :not(router-outlet) excludes the <router-outlet> placeholder element itself.
+*/
+.main-content > *:not(router-outlet) {
+  animation: pageEnter 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-/* ── Main content padding-top (below sticky nav) ─────────────────────────── */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Disable animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .main-content > *:not(router-outlet) {
+    animation: none;
+  }
+}
+
+/* ── Main content area ────────────────────────────────────────────────────── */
 .main-content { min-height: calc(100vh - 64px); }
 
 /* ── Utility ────────────────────────────────────────────────────────────────── */

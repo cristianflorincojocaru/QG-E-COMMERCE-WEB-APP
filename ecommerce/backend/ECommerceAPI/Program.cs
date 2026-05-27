@@ -138,8 +138,20 @@ try
     // ─────────────────────────────────────────────────────────────────────────
 
     app.UseSerilogRequestLogging(opts =>
+    {
         opts.MessageTemplate =
-            "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0}ms");
+            "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0}ms";
+        // Health-check endpoints short-circuit the pipeline before Serilog can
+        // capture a proper StatusCode → they show as "Ignored". Suppress them.
+        opts.GetLevel = (httpContext, _, ex) =>
+        {
+            if (ex is null && httpContext.Request.Path.StartsWithSegments("/health"))
+                return Serilog.Events.LogEventLevel.Verbose; // below MinimumLevel → not written
+            return ex is not null
+                ? Serilog.Events.LogEventLevel.Error
+                : Serilog.Events.LogEventLevel.Information;
+        };
+    });
 
     app.UseSwagger();
     app.UseSwaggerUI(opts =>
