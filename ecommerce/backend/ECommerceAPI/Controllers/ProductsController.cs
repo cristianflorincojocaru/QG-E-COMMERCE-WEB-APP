@@ -1,4 +1,6 @@
+using ECommerceAPI.DTOs;
 using ECommerceAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ECommerceAPI.Controllers;
@@ -11,32 +13,61 @@ public class ProductsController : ControllerBase
 
     public ProductsController(IProductService products) => _products = products;
 
-    /// <summary>Returns a paginated list of products with optional filters.</summary>
-    // GET api/products?category=Women%27s+Tops&search=blue&page=1&pageSize=12
+    // ── Public read endpoints ─────────────────────────────────────────────────
+
+    /// <summary>Paginated product list with optional category / search filters.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? category,
         [FromQuery] string? search,
-        [FromQuery] int     page     = 1,
-        [FromQuery] int     pageSize = 12)
-    {
-        var result = await _products.GetAllAsync(category, search, page, pageSize);
-        return Ok(result);
-    }
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 12)
+        => Ok(await _products.GetAllAsync(category, search, page, pageSize));
 
-    /// <summary>Returns a single product by ID.</summary>
+    /// <summary>Single product by ID.</summary>
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var product = await _products.GetByIdAsync(id);
-        return product is null ? NotFound() : Ok(product);
+        var p = await _products.GetByIdAsync(id);
+        return p is null ? NotFound() : Ok(p);
     }
 
-    /// <summary>Returns the distinct list of all product categories.</summary>
+    /// <summary>Distinct list of all product categories.</summary>
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories()
+        => Ok(await _products.GetCategoriesAsync());
+
+    // ── Admin-only write endpoints ────────────────────────────────────────────
+
+    /// <summary>Create a new product. Requires Admin role.</summary>
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Create([FromBody] SaveProductRequest req)
     {
-        var cats = await _products.GetCategoriesAsync();
-        return Ok(cats);
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new { message = "Name is required." });
+        if (req.Price < 0)
+            return BadRequest(new { message = "Price must be >= 0." });
+
+        var created = await _products.CreateAsync(req);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+
+    /// <summary>Update an existing product. Requires Admin role.</summary>
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(int id, [FromBody] SaveProductRequest req)
+    {
+        var ok = await _products.UpdateAsync(id, req);
+        return ok ? NoContent() : NotFound();
+    }
+
+    /// <summary>Delete a product. Requires Admin role.</summary>
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var ok = await _products.DeleteAsync(id);
+        return ok ? NoContent() : NotFound();
     }
 }

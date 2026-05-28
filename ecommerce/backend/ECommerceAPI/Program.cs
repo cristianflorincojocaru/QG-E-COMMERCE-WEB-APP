@@ -2,6 +2,7 @@ using ECommerceAPI.Data;
 using ECommerceAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -10,7 +11,6 @@ using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
 
-// ── Serilog bootstrap (captures startup errors before DI is ready) ────────────
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
@@ -19,7 +19,6 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // ── Serilog structured logging ────────────────────────────────────────────
     builder.Host.UseSerilog((ctx, cfg) =>
         cfg.ReadFrom.Configuration(ctx.Configuration)
            .Enrich.FromLogContext()
@@ -31,28 +30,19 @@ try
 
     builder.Services.AddControllers();
 
-    // ── Dependency Injection ──────────────────────────────────────────────────
     builder.Services.AddScoped<IDbContext, DbContext>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IProductService, ProductService>();
     builder.Services.AddScoped<ICartService, CartService>();
     builder.Services.AddScoped<IOrderService, OrderService>();
 
-    // ── Health Checks ─────────────────────────────────────────────────────────
-    // Pings the SQL Server connection to verify the DB is reachable.
-    // Docker Compose and load balancers use GET /health to decide if the
-    // container is ready to receive traffic.
     builder.Services.AddHealthChecks()
         .AddCheck("self", () => HealthCheckResult.Healthy("API is running."))
         .AddCheck<SqlHealthCheck>("database");
 
-    // ── Rate Limiting (ASP.NET Core 8 built-in) ───────────────────────────────
-    // Protects the login endpoint from brute-force attacks.
     builder.Services.AddRateLimiter(opts =>
     {
         opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-        // "login" policy: max 5 requests per 60 seconds per IP address
         opts.AddPolicy("login", ctx =>
             RateLimitPartition.GetFixedWindowLimiter(
                 partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -61,10 +51,8 @@ try
                     PermitLimit = 5,
                     Window = TimeSpan.FromMinutes(1),
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 0   // no queuing — reject immediately
+                    QueueLimit = 0
                 }));
-
-        // "api" policy: general limit of 120 requests per minute per IP
         opts.AddPolicy("api", ctx =>
             RateLimitPartition.GetFixedWindowLimiter(
                 partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -77,7 +65,6 @@ try
                 }));
     });
 
-    // ── Swagger / OpenAPI ─────────────────────────────────────────────────────
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(opts =>
     {
@@ -85,11 +72,10 @@ try
         {
             Title = "LuxeCart API",
             Version = "v1",
-            Description = "E-Commerce REST API — ASP.NET Core 8 · raw ADO.NET · JWT Auth"
+            Description = "E-Commerce REST API — ASP.NET Core · raw ADO.NET · JWT Auth · Roles"
         });
         opts.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
-            Name = "Authorization",
             Type = SecuritySchemeType.Http,
             Scheme = "bearer",
             BearerFormat = "JWT",
@@ -106,7 +92,6 @@ try
         }});
     });
 
-    // ── JWT Authentication ────────────────────────────────────────────────────
     var jwtSecret = builder.Configuration["Jwt:Secret"]
         ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
 
@@ -126,7 +111,6 @@ try
             };
         });
 
-    // ── CORS ──────────────────────────────────────────────────────────────────
     builder.Services.AddCors(opts =>
         opts.AddPolicy("AllowAngular", policy =>
             policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
@@ -137,16 +121,19 @@ try
     var app = builder.Build();
     // ─────────────────────────────────────────────────────────────────────────
 
+    await SeedAdminAsync(app);
+
+    // ── Serilog PRIMUL — prinde toate request-urile înainte de orice middleware
     app.UseSerilogRequestLogging(opts =>
     {
         opts.MessageTemplate =
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0}ms";
-        // Health-check endpoints short-circuit the pipeline before Serilog can
-        // capture a proper StatusCode → they show as "Ignored". Suppress them.
         opts.GetLevel = (httpContext, _, ex) =>
         {
+            // Health check endpoints short-circuit pipeline → apar ca "Ignored"
+            // Suprimăm la Verbose (sub MinimumLevel=Information → nu se scriu)
             if (ex is null && httpContext.Request.Path.StartsWithSegments("/health"))
-                return Serilog.Events.LogEventLevel.Verbose; // below MinimumLevel → not written
+                return Serilog.Events.LogEventLevel.Verbose;
             return ex is not null
                 ? Serilog.Events.LogEventLevel.Error
                 : Serilog.Events.LogEventLevel.Information;
@@ -159,13 +146,12 @@ try
         opts.SwaggerEndpoint("/swagger/v1/swagger.json", "LuxeCart API v1");
         opts.RoutePrefix = "swagger";
         opts.DocumentTitle = "LuxeCart API";
-        opts.DisplayRequestDuration(); // FIX: was "= true" — DisplayRequestDuration is a method, not a property
+        opts.DisplayRequestDuration();
     });
 
     app.UseCors("AllowAngular");
     app.UseRateLimiter();
 
-    // Global unhandled exception handler — returns clean JSON, never leaks stack traces
     app.UseExceptionHandler(errApp =>
         errApp.Run(async ctx =>
         {
@@ -177,15 +163,12 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // ── Health check endpoints ────────────────────────────────────────────────
-    // GET /health         → full JSON report (for dashboards / Docker healthcheck)
-    // GET /health/live    → minimal liveness probe (just "Healthy")
     app.MapHealthChecks("/health", new HealthCheckOptions
     {
         ResponseWriter = async (ctx, report) =>
         {
             ctx.Response.ContentType = "application/json";
-            var result = new
+            await ctx.Response.WriteAsJsonAsync(new
             {
                 status = report.Status.ToString(),
                 checks = report.Entries.Select(e => new
@@ -195,14 +178,12 @@ try
                     description = e.Value.Description
                 }),
                 totalDuration = report.TotalDuration.TotalMilliseconds + "ms"
-            };
-            await ctx.Response.WriteAsJsonAsync(result);
+            });
         }
     });
 
     app.MapHealthChecks("/health/live", new HealthCheckOptions
     {
-        // Liveness: only check that the process is running (skip DB)
         Predicate = check => check.Name == "self"
     });
 
@@ -219,6 +200,36 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+static async Task SeedAdminAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<IDbContext>();
+
+    await using var conn = await db.OpenAsync();
+
+    const string check = "SELECT COUNT(1) FROM Users WHERE Email = @Email";
+    await using (var cmd = new SqlCommand(check, conn))
+    {
+        cmd.Parameters.AddWithValue("@Email", "admin@luxecart.com");
+        if (Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0) return;
+    }
+
+    var hash = BCrypt.Net.BCrypt.HashPassword("Admin@123", workFactor: 12);
+
+    const string insert = @"
+        INSERT INTO Users (FirstName, LastName, Email, PasswordHash, Role)
+        VALUES ('Admin', 'LuxeCart', 'admin@luxecart.com', @Hash, 'Admin')";
+
+    await using (var cmd = new SqlCommand(insert, conn))
+    {
+        cmd.Parameters.AddWithValue("@Hash", hash);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    app.Logger.LogInformation(
+        "Admin user seeded → admin@luxecart.com / Admin@123 (change this password!)");
 }
 
 public partial class Program { }

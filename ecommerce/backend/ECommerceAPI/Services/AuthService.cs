@@ -38,16 +38,16 @@ public class AuthService : IAuthService
         await using (var cmd = new SqlCommand(checkSql, conn))
         {
             cmd.Parameters.AddWithValue("@Email", req.Email.Trim().ToLower());
-            var count = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-            if (count > 0) return null;
+            if (Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0) return null;
         }
 
         var hash = BCrypt.Net.BCrypt.HashPassword(req.Password, workFactor: 12);
 
+        // Role defaults to 'Customer' — only the DB seeder / AdminController can set 'Admin'
         const string insertSql = @"
-            INSERT INTO Users (FirstName, LastName, Email, PasswordHash)
+            INSERT INTO Users (FirstName, LastName, Email, PasswordHash, Role)
             OUTPUT INSERTED.Id
-            VALUES (@FirstName, @LastName, @Email, @Hash)";
+            VALUES (@FirstName, @LastName, @Email, @Hash, 'Customer')";
 
         int newId;
         await using (var cmd = new SqlCommand(insertSql, conn))
@@ -62,12 +62,13 @@ public class AuthService : IAuthService
         var user = new User
         {
             Id = newId,
-            FirstName = req.FirstName,
-            LastName = req.LastName,
-            Email = req.Email
+            FirstName = req.FirstName.Trim(),
+            LastName = req.LastName.Trim(),
+            Email = req.Email.Trim().ToLower(),
+            Role = "Customer"
         };
 
-        return new AuthResponse(BuildJwt(user), user.Email, user.FirstName, user.LastName);
+        return new AuthResponse(BuildJwt(user), user.Email, user.FirstName, user.LastName, user.Role);
     }
 
     // ── Login ─────────────────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ public class AuthService : IAuthService
         await using var conn = await _db.OpenAsync();
 
         const string sql = @"
-            SELECT Id, FirstName, LastName, Email, PasswordHash
+            SELECT Id, FirstName, LastName, Email, PasswordHash, Role
             FROM   Users
             WHERE  Email = @Email";
 
@@ -95,23 +96,16 @@ public class AuthService : IAuthService
                     FirstName = reader.GetString(1),
                     LastName = reader.GetString(2),
                     Email = reader.GetString(3),
-                    PasswordHash = reader.GetString(4)
+                    PasswordHash = reader.GetString(4),
+                    Role = reader.GetString(5)
                 };
             }
         }
 
-        // FIX: split into two separate null checks instead of combining with ||.
-        // The C# compiler does not narrow 'user' to non-null on the right-hand
-        // side of a compound || expression, so "user.PasswordHash" there still
-        // produces CS8604 even though it can never actually be null at that point.
-        // Two explicit early-returns give the flow analyser the certainty it needs.
-        if (user is null)
-            return null;
+        if (user is null) return null;
+        if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash)) return null;
 
-        if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
-            return null;
-
-        return new AuthResponse(BuildJwt(user), user.Email, user.FirstName, user.LastName);
+        return new AuthResponse(BuildJwt(user), user.Email, user.FirstName, user.LastName, user.Role);
     }
 
     // ── JWT builder ───────────────────────────────────────────────────────────
@@ -126,6 +120,7 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("firstName",                   user.FirstName),
             new Claim("lastName",                    user.LastName),
+            new Claim(ClaimTypes.Role,               user.Role),   // ← used by [Authorize(Roles="Admin")]
             new Claim(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString())
         };
 

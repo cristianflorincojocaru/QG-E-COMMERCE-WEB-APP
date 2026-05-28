@@ -9,6 +9,9 @@ public interface IProductService
     Task<PagedResult<ProductDto>> GetAllAsync(string? category, string? search, int page, int pageSize);
     Task<ProductDto?> GetByIdAsync(int id);
     Task<List<string>> GetCategoriesAsync();
+    Task<ProductDto> CreateAsync(SaveProductRequest req);
+    Task<bool> UpdateAsync(int id, SaveProductRequest req);
+    Task<bool> DeleteAsync(int id);
 }
 
 public class ProductService : IProductService
@@ -17,44 +20,36 @@ public class ProductService : IProductService
 
     public ProductService(IDbContext db) => _db = db;
 
-    // ── Paged product list with optional category / search filter ─────────────
+    // ── Read ──────────────────────────────────────────────────────────────────
+
     public async Task<PagedResult<ProductDto>> GetAllAsync(
         string? category, string? search, int page = 1, int pageSize = 12)
     {
-        // Clamp values to safe ranges
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 50);
 
         await using var conn = await _db.OpenAsync();
-
         var where = new List<string>();
+
         if (!string.IsNullOrWhiteSpace(category)) where.Add("Category = @Category");
         if (!string.IsNullOrWhiteSpace(search)) where.Add("(Name LIKE @Search OR Description LIKE @Search)");
 
         var whereClause = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
 
-        // Count total matching rows for pagination metadata
-        var countSql = $"SELECT COUNT(1) FROM Products {whereClause}";
         int totalItems;
-
-        await using (var cmd = new SqlCommand(countSql, conn))
+        await using (var cmd = new SqlCommand($"SELECT COUNT(1) FROM Products {whereClause}", conn))
         {
             AddFilterParams(cmd, category, search);
-            // FIX: ExecuteScalarAsync returns object? — Convert.ToInt32 handles
-            // null safely (returns 0) and avoids the "unboxing nullable" warning.
             totalItems = Convert.ToInt32(await cmd.ExecuteScalarAsync());
         }
 
-        // Fetch the requested page using OFFSET / FETCH (SQL Server 2012+)
         var dataSql = $@"
             SELECT Id, Name, Description, Price, Category, ImageUrl, Stock
-            FROM   Products
-            {whereClause}
+            FROM   Products {whereClause}
             ORDER  BY Name
             OFFSET @Skip ROWS FETCH NEXT @PageSize ROWS ONLY";
 
         var results = new List<ProductDto>();
-
         await using (var cmd = new SqlCommand(dataSql, conn))
         {
             AddFilterParams(cmd, category, search);
@@ -62,8 +57,7 @@ public class ProductService : IProductService
             cmd.Parameters.AddWithValue("@PageSize", pageSize);
 
             await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-                results.Add(MapProduct(reader));
+            while (await reader.ReadAsync()) results.Add(MapProduct(reader));
         }
 
         return new PagedResult<ProductDto>(results, totalItems, page, pageSize);
@@ -77,7 +71,6 @@ public class ProductService : IProductService
 
         await using var cmd = new SqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("@Id", id);
-
         await using var reader = await cmd.ExecuteReaderAsync();
         return await reader.ReadAsync() ? MapProduct(reader) : null;
     }
@@ -94,13 +87,69 @@ public class ProductService : IProductService
         return list;
     }
 
+    // ── Write (Admin only — enforced at controller level) ────────────────────
+
+    public async Task<ProductDto> CreateAsync(SaveProductRequest req)
+    {
+        await using var conn = await _db.OpenAsync();
+        const string sql = @"
+            INSERT INTO Products (Name, Description, Price, Category, ImageUrl, Stock)
+            OUTPUT INSERTED.Id
+            VALUES (@Name, @Description, @Price, @Category, @ImageUrl, @Stock)";
+
+        await using var cmd = new SqlCommand(sql, conn);
+        AddSaveParams(cmd, req);
+        var newId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+        return new ProductDto(newId, req.Name, req.Description, req.Price, req.Category, req.ImageUrl, req.Stock);
+    }
+
+    public async Task<bool> UpdateAsync(int id, SaveProductRequest req)
+    {
+        await using var conn = await _db.OpenAsync();
+        const string sql = @"
+            UPDATE Products
+            SET Name        = @Name,
+                Description = @Description,
+                Price       = @Price,
+                Category    = @Category,
+                ImageUrl    = @ImageUrl,
+                Stock       = @Stock
+            WHERE Id = @Id";
+
+        await using var cmd = new SqlCommand(sql, conn);
+        AddSaveParams(cmd, req);
+        cmd.Parameters.AddWithValue("@Id", id);
+        return await cmd.ExecuteNonQueryAsync() > 0;
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        await using var conn = await _db.OpenAsync();
+        const string sql = "DELETE FROM Products WHERE Id = @Id";
+
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@Id", id);
+        return await cmd.ExecuteNonQueryAsync() > 0;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
     private static void AddFilterParams(SqlCommand cmd, string? category, string? search)
     {
         if (!string.IsNullOrWhiteSpace(category))
             cmd.Parameters.AddWithValue("@Category", category);
         if (!string.IsNullOrWhiteSpace(search))
             cmd.Parameters.AddWithValue("@Search", $"%{search}%");
+    }
+
+    private static void AddSaveParams(SqlCommand cmd, SaveProductRequest req)
+    {
+        cmd.Parameters.AddWithValue("@Name", req.Name);
+        cmd.Parameters.AddWithValue("@Description", req.Description);
+        cmd.Parameters.AddWithValue("@Price", req.Price);
+        cmd.Parameters.AddWithValue("@Category", req.Category);
+        cmd.Parameters.AddWithValue("@ImageUrl", req.ImageUrl);
+        cmd.Parameters.AddWithValue("@Stock", req.Stock);
     }
 
     private static ProductDto MapProduct(SqlDataReader r) => new(

@@ -17,23 +17,38 @@ import { CartService }                    from '../../services/cart.service';
         <a routerLink="/products" routerLinkActive="active">Shop</a>
 
         @if (isLoggedIn()) {
-          <a routerLink="/orders" routerLinkActive="active">Orders</a>
-          <a routerLink="/cart" class="cart-link" routerLinkActive="active">
-            Bag
-            @if (cartCount > 0) {
-              <span class="badge" [class.pop]="animateBadge">{{ cartCount }}</span>
-            }
-          </a>
-          <a routerLink="/checkout" routerLinkActive="active">Checkout</a>
+
+          @if (isAdmin()) {
+            <!-- Admin navigation -->
+            <a routerLink="/admin" routerLinkActive="active" class="admin-link">
+              Dashboard
+            </a>
+          } @else {
+            <!-- Customer navigation -->
+            <a routerLink="/orders"   routerLinkActive="active">Orders</a>
+            <a routerLink="/cart"     class="cart-link" routerLinkActive="active">
+              Bag
+              @if (cartCount > 0) {
+                <span class="badge" [class.pop]="animateBadge">{{ cartCount }}</span>
+              }
+            </a>
+            <a routerLink="/checkout" routerLinkActive="active">Checkout</a>
+          }
+
           <span class="divider"></span>
+
+          <span class="user-role" [class.role-admin]="isAdmin()">
+            {{ currentUser()?.firstName }} · {{ isAdmin() ? 'Admin' : 'Customer' }}
+          </span>
+
           <button class="logout-btn" (click)="logout()">Sign Out</button>
+
         } @else {
-          <a routerLink="/login" routerLinkActive="active">Sign In</a>
+          <a routerLink="/login"    routerLinkActive="active">Sign In</a>
           <a routerLink="/register" class="btn-register">Register</a>
         }
       </div>
 
-      <!-- Mobile hamburger -->
       <button class="hamburger" (click)="menuOpen = !menuOpen" aria-label="Toggle menu">
         <span [class.open]="menuOpen"></span>
         <span [class.open]="menuOpen"></span>
@@ -41,13 +56,16 @@ import { CartService }                    from '../../services/cart.service';
       </button>
     </nav>
 
-    <!-- Mobile drawer -->
     <div class="mobile-menu" [class.open]="menuOpen" (click)="menuOpen = false">
       <a routerLink="/products">Shop</a>
       @if (isLoggedIn()) {
-        <a routerLink="/orders">My Orders</a>
-        <a routerLink="/cart">Bag ({{ cartCount }})</a>
-        <a routerLink="/checkout">Checkout</a>
+        @if (isAdmin()) {
+          <a routerLink="/admin">Dashboard</a>
+        } @else {
+          <a routerLink="/orders">My Orders</a>
+          <a routerLink="/cart">Bag ({{ cartCount }})</a>
+          <a routerLink="/checkout">Checkout</a>
+        }
         <button (click)="logout()">Sign Out</button>
       } @else {
         <a routerLink="/login">Sign In</a>
@@ -65,74 +83,53 @@ import { CartService }                    from '../../services/cart.service';
       backdrop-filter: blur(12px);
     }
 
-    /* ── LUXECART brand ────────────────────────────────────────────────────── */
+    /* ── Brand ── */
     .brand {
       font-family: var(--font-display); font-size: 1.4rem; font-weight: 700;
       color: var(--text-light); text-decoration: none; letter-spacing: .12em;
-      flex-shrink: 0;
-      position: relative; overflow: hidden;
+      flex-shrink: 0; position: relative; overflow: hidden;
       transition: letter-spacing .35s ease;
     }
-    .brand span {
-      color: var(--accent);
-      transition: color .35s ease;
-    }
-    /* shimmer sweep on the brand text */
+    .brand span { color: var(--accent); transition: color .35s ease; }
     .brand::after {
-      content: '';
-      position: absolute;
-      top: 0; left: -80%;
-      width: 50%; height: 100%;
-      background: linear-gradient(
-        120deg,
-        transparent 20%,
-        rgba(212,168,83,.35) 50%,
-        transparent 80%
-      );
-      opacity: 0;
-      transition: opacity .1s;
+      content: ''; position: absolute; top: 0; left: -80%; width: 50%; height: 100%;
+      background: linear-gradient(120deg, transparent 20%, rgba(212,168,83,.35) 50%, transparent 80%);
+      opacity: 0; transition: opacity .1s;
     }
-    .brand:hover::after {
-      opacity: 1;
-      animation: brandShimmer .65s ease forwards;
-    }
+    .brand:hover::after { opacity: 1; animation: brandShimmer .65s ease forwards; }
     .brand:hover { letter-spacing: .17em; }
-    .brand:hover span {
-      color: #f0c96a;
-      text-shadow: 0 0 12px rgba(212,168,83,.6);
-    }
-    @keyframes brandShimmer {
-      from { left: -80%; }
-      to   { left: 130%; }
-    }
+    .brand:hover span { color: #f0c96a; text-shadow: 0 0 12px rgba(212,168,83,.6); }
+    @keyframes brandShimmer { from { left: -80%; } to { left: 130%; } }
 
-    /* ── Nav links shared ─────────────────────────────────────────────────── */
+    /* ── Nav links ── */
     .nav-links { display: flex; align-items: center; gap: 1.8rem; }
     .nav-links a {
       font-size: .82rem; letter-spacing: .1em; text-transform: uppercase;
       color: rgba(255,255,255,.65); text-decoration: none;
-      position: relative;
-      transition: color .2s;
-      white-space: nowrap;
+      position: relative; transition: color .2s; white-space: nowrap;
     }
-
-    /* underline slide-in animation for plain links (Shop, Sign In, Orders…) */
-    .nav-links a:not(.cart-link):not(.btn-register)::after {
-      content: '';
-      position: absolute;
-      bottom: -3px; left: 0;
-      width: 0; height: 1.5px;
-      background: var(--accent);
+    .nav-links a:not(.cart-link):not(.btn-register):not(.admin-link)::after {
+      content: ''; position: absolute; bottom: -3px; left: 0;
+      width: 0; height: 1.5px; background: var(--accent);
       transition: width .28s cubic-bezier(.4,0,.2,1);
     }
-    .nav-links a:not(.cart-link):not(.btn-register):hover::after,
-    .nav-links a:not(.cart-link):not(.btn-register).active::after {
-      width: 100%;
-    }
-    .nav-links a:hover,
-    .nav-links a.active { color: #fff; }
+    .nav-links a:not(.cart-link):not(.btn-register):not(.admin-link):hover::after,
+    .nav-links a:not(.cart-link):not(.btn-register):not(.admin-link).active::after { width: 100%; }
+    .nav-links a:hover, .nav-links a.active { color: #fff; }
 
-    /* ── Cart / badge ─────────────────────────────────────────────────────── */
+    /* ── Admin link ── */
+    .admin-link {
+      color: var(--accent) !important;
+      position: relative;
+    }
+    .admin-link::after {
+      content: ''; position: absolute; bottom: -3px; left: 0;
+      width: 0; height: 1.5px; background: var(--accent);
+      transition: width .28s cubic-bezier(.4,0,.2,1);
+    }
+    .admin-link:hover::after, .admin-link.active::after { width: 100%; }
+
+    /* ── Cart badge ── */
     .cart-link { position: relative; }
     .badge {
       position: absolute; top: -8px; right: -14px;
@@ -141,91 +138,65 @@ import { CartService }                    from '../../services/cart.service';
       display: flex; align-items: center; justify-content: center;
     }
     .badge.pop { animation: pop .35s ease; }
-    @keyframes pop {
-      0%   { transform: scale(1); }
-      50%  { transform: scale(1.5); }
-      100% { transform: scale(1); }
-    }
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.5); } 100% { transform: scale(1); } }
 
     .divider { width: 1px; height: 18px; background: rgba(255,255,255,.12); }
 
-    /* ── Register button ──────────────────────────────────────────────────── */
+    /* ── User role pill ── */
+    .user-role {
+      font-size: .72rem; letter-spacing: .1em; text-transform: uppercase;
+      color: rgba(255,255,255,.4); white-space: nowrap;
+    }
+    .user-role.role-admin { color: var(--accent); }
+
+    /* ── Register button ── */
     .btn-register {
-      background: var(--accent) !important;
-      color: #fff !important;
-      padding: .38rem 1.1rem;
-      border-radius: 2px;
+      background: var(--accent) !important; color: #fff !important;
+      padding: .38rem 1.1rem; border-radius: 2px;
       position: relative; overflow: hidden;
       transition: transform .22s ease, box-shadow .22s ease, background .22s ease !important;
-      box-shadow: 0 0 0 0 rgba(212,168,83,0);
     }
-    /* pulse ring on idle */
     .btn-register::before {
-      content: '';
-      position: absolute; inset: 0;
-      border-radius: 2px;
+      content: ''; position: absolute; inset: 0; border-radius: 2px;
       box-shadow: 0 0 0 0 rgba(212,168,83,.55);
       animation: registerPulse 2.2s ease-out infinite;
     }
-    /* shimmer sweep on hover */
     .btn-register::after {
-      content: '';
-      position: absolute;
-      top: 0; left: -100%;
+      content: ''; position: absolute; top: 0; left: -100%;
       width: 55%; height: 100%;
       background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.22) 50%, transparent 70%);
-      transition: left .0s;
     }
-    .btn-register:hover::after {
-      animation: registerShimmer .5s ease forwards;
-    }
+    .btn-register:hover::after { animation: registerShimmer .5s ease forwards; }
     .btn-register:hover {
       transform: translateY(-2px) !important;
       box-shadow: 0 6px 20px rgba(212,168,83,.4) !important;
       background: #c9952f !important;
     }
-    @keyframes registerPulse {
-      0%   { box-shadow: 0 0 0 0   rgba(212,168,83,.55); }
-      60%  { box-shadow: 0 0 0 8px rgba(212,168,83,0); }
-      100% { box-shadow: 0 0 0 0   rgba(212,168,83,0); }
-    }
-    @keyframes registerShimmer {
-      from { left: -100%; }
-      to   { left: 160%; }
-    }
+    @keyframes registerPulse { 0% { box-shadow: 0 0 0 0 rgba(212,168,83,.55); } 60% { box-shadow: 0 0 0 8px rgba(212,168,83,0); } 100% { box-shadow: 0 0 0 0 rgba(212,168,83,0); } }
+    @keyframes registerShimmer { from { left: -100%; } to { left: 160%; } }
 
-    /* ── Logout button ────────────────────────────────────────────────────── */
+    /* ── Sign Out ── */
     .logout-btn {
       background: none; border: none; cursor: pointer; font-family: inherit;
       font-size: .82rem; letter-spacing: .1em; text-transform: uppercase;
-      color: rgba(255,255,255,.65); transition: color .2s;
-      position: relative;
+      color: rgba(255,255,255,.65); transition: color .2s; position: relative;
     }
     .logout-btn::after {
-      content: '';
-      position: absolute;
-      bottom: -3px; left: 0;
-      width: 0; height: 1.5px;
-      background: var(--accent);
+      content: ''; position: absolute; bottom: -3px; left: 0;
+      width: 0; height: 1.5px; background: var(--accent);
       transition: width .28s cubic-bezier(.4,0,.2,1);
     }
     .logout-btn:hover::after { width: 100%; }
     .logout-btn:hover { color: #fff; }
 
-    /* ── Mobile hamburger ─────────────────────────────────────────────────── */
-    .hamburger {
-      display: none; flex-direction: column; gap: 5px;
-      background: none; border: none; cursor: pointer; padding: .5rem;
-    }
-    .hamburger span {
-      display: block; width: 22px; height: 2px; background: #fff;
-      transition: transform .3s, opacity .3s;
-    }
+    /* ── Hamburger ── */
+    .hamburger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: .5rem; }
+    .hamburger span { display: block; width: 22px; height: 2px; background: #fff; transition: transform .3s, opacity .3s; }
     .hamburger span.open:nth-child(1) { transform: translateY(7px) rotate(45deg); }
     .hamburger span.open:nth-child(2) { opacity: 0; }
     .hamburger span.open:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-    /* ── Mobile drawer ────────────────────────────────────────────────────── */
+    /* ── Mobile drawer ── */
     .mobile-menu {
       display: none; flex-direction: column; gap: 1.5rem;
       position: fixed; inset: 64px 0 0; background: var(--bg-dark);
@@ -257,7 +228,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   constructor(public auth: AuthService, private cart: CartService) {}
 
-  get isLoggedIn() { return this.auth.isLoggedIn; }
+  get isLoggedIn()  { return this.auth.isLoggedIn; }
+  get isAdmin()     { return this.auth.isAdmin; }
+  get currentUser() { return this.auth.currentUser; }
 
   ngOnInit(): void {
     this.sub = this.cart.cart$.subscribe(c => {

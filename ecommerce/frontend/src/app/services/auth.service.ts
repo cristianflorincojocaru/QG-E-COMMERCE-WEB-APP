@@ -1,28 +1,38 @@
-import { Injectable, signal } from '@angular/core';
-import { HttpClient }          from '@angular/common/http';
-import { Router }              from '@angular/router';
-import { tap }                 from 'rxjs/operators';
-import { Observable }          from 'rxjs';
-import { AuthResponse }        from '../models/models';
-import { environment }         from '../../environments/environment';
+import { Injectable, signal, computed } from '@angular/core';
+import { HttpClient }                    from '@angular/common/http';
+import { Router }                        from '@angular/router';
+import { tap }                           from 'rxjs/operators';
+import { Observable }                    from 'rxjs';
+import { AuthResponse }                  from '../models/models';
+import { environment }                   from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly apiUrl = `${environment.apiUrl}/auth`;
 
-  // Signal — reactive auth state (Angular 17+)
   isLoggedIn  = signal(this.hasToken());
   currentUser = signal<AuthResponse | null>(this.loadUser());
 
+  // Derived signals — no extra state to keep in sync
+  isAdmin    = computed(() => this.currentUser()?.role === 'Admin');
+  isCustomer = computed(() => this.currentUser()?.role === 'Customer');
+
   constructor(private http: HttpClient, private router: Router) {}
 
-  register(data: { firstName: string; lastName: string; email: string; password: string }): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, data)
+  register(data: {
+    firstName: string;
+    lastName:  string;
+    email:     string;
+    password:  string;
+  }): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/register`, data)
       .pipe(tap(res => this.storeSession(res)));
   }
 
   login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, { email, password })
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/login`, { email, password })
       .pipe(tap(res => this.storeSession(res)));
   }
 
@@ -38,7 +48,7 @@ export class AuthService {
     return localStorage.getItem('token');
   }
 
-  // ── Private helpers ──────────────────────────────────────────────────────
+  // ── Private helpers ───────────────────────────────────────────────────────
   private storeSession(res: AuthResponse): void {
     localStorage.setItem('token', res.token);
     localStorage.setItem('user', JSON.stringify(res));
