@@ -119,9 +119,12 @@ import { CartService }                    from '../../services/cart.service';
 
     /* ── Admin link ── */
     .admin-link {
-      color: var(--accent) !important;
-      position: relative;
-    }
+  color: rgba(255,255,255,.65) !important;
+  position: relative;
+}
+.admin-link.active {
+  color: var(--accent) !important;
+}
     .admin-link::after {
       content: ''; position: absolute; bottom: -3px; left: 0;
       width: 0; height: 1.5px; background: var(--accent);

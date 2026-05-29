@@ -50,8 +50,7 @@ import { OrderService }               from '../../services/product-order.service
                 </div>
 
                 <!-- Expandable items list -->
-                @if (expandedId === order.id) {
-                  <div class="order-items">
+                <div class="order-items" [class.open]="expandedId === order.id">
                     <div class="items-header">
                       <span>Product</span>
                       <span>Qty</span>
@@ -76,7 +75,7 @@ import { OrderService }               from '../../services/product-order.service
                       <strong>Shipped to:</strong> {{ order.shippingAddress }}
                     </p>
                   </div>
-                }
+                
               </article>
             }
           </div>
@@ -95,8 +94,12 @@ import { OrderService }               from '../../services/product-order.service
       margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;
     }
     h1 { font-family: var(--font-display); font-size: 2.5rem; animation: fadeUp .5s ease both; }
-    .shop-link { font-size: .82rem; color: var(--text-muted); text-decoration: none; }
-    .shop-link:hover { color: var(--accent); }
+    .shop-link {
+  font-size: .82rem; color: var(--text-muted); text-decoration: none;
+  letter-spacing: .1em; text-transform: uppercase;
+  transition: color .2s;
+}
+.shop-link:hover { color: var(--accent); }
 
     /* ── Order cards ── */
     .orders-list { display: flex; flex-direction: column; gap: 1rem; }
@@ -113,7 +116,10 @@ import { OrderService }               from '../../services/product-order.service
       padding: 1.2rem 1.5rem; cursor: pointer; gap: 1rem;
     }
     .order-meta { display: flex; flex-direction: column; gap: .2rem; }
-    .order-num  { font-weight: 600; font-size: .95rem; }
+    .order-num {
+  font-weight: 600; font-size: .95rem;
+  text-transform: uppercase; letter-spacing: .08em;
+}
     .order-date { font-size: .78rem; color: var(--text-muted); }
 
     .order-right { display: flex; align-items: center; gap: 1.5rem; }
@@ -134,10 +140,13 @@ import { OrderService }               from '../../services/product-order.service
 
     /* Expanded items table */
     .order-items {
-      border-top: 1px solid var(--border);
-      padding: 1.2rem 1.5rem;
-      animation: expand .25s ease both;
-    }
+  border-top: 0px solid var(--border);
+  padding: 0 1.5rem;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height .35s ease, opacity .3s ease, padding .35s ease, border-width .1s ease;
+}
     .items-header, .item-row, .items-total {
       display: grid; grid-template-columns: 1fr 60px 110px 110px;
       gap: .5rem; padding: .5rem 0; font-size: .83rem;
@@ -150,9 +159,10 @@ import { OrderService }               from '../../services/product-order.service
     .item-row { border-bottom: 1px solid var(--bg-muted); }
     .item-name { font-weight: 500; }
     .items-total {
-      font-size: .88rem; padding-top: .75rem;
-      border-top: 1px solid var(--border); margin-top: .25rem;
-    }
+  font-size: .88rem; padding-top: .75rem;
+  border-top: 1px solid var(--border); margin-top: .25rem;
+  text-transform: uppercase; letter-spacing: .08em;
+}
     .ship-addr { margin-top: .75rem; font-size: .8rem; color: var(--text-muted); }
     .ship-addr strong { color: var(--text); }
 
@@ -177,7 +187,12 @@ import { OrderService }               from '../../services/product-order.service
     .cta-btn:hover { background: var(--accent); }
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes expand { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 600px; } }
+    .order-items.open {
+  border-top: 1px solid var(--border);
+  padding: 1.2rem 1.5rem;
+  max-height: 600px;
+  opacity: 1;
+}
 
     @media (max-width: 600px) {
       .items-header, .item-row, .items-total { grid-template-columns: 1fr 50px 90px; }

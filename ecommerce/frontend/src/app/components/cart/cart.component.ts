@@ -21,12 +21,17 @@ import { ToastService }         from '../../services/toast.service';
         }
 
         @if (cart && cart.items.length === 0) {
-          <div class="empty-cart">
-            <p class="empty-icon">◎</p>
-            <p>Your bag is empty.</p>
-            <a routerLink="/products" class="cta">Start Shopping</a>
-          </div>
-        }
+  <div class="empty-cart">
+    <div class="empty-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <circle cx="12" cy="12" r="10"/>
+        <circle cx="12" cy="12" r="4"/>
+      </svg>
+    </div>
+    <p>Your bag is empty.</p>
+    <a routerLink="/products" class="cta">Start Shopping</a>
+  </div>
+}
 
         @if (cart && cart.items.length > 0) {
           <div class="cart-layout">
@@ -69,7 +74,7 @@ import { ToastService }         from '../../services/toast.service';
               </div>
               <div class="summary-total">
                 <span>Total</span>
-                <strong>{{ cart.total | currency:'USD' }}</strong>
+                <strong class="total-price" [class.bump]="animating">{{ cart.total | currency:'USD' }}</strong>
               </div>
               <p class="note">* Final amount verified server-side at checkout.</p>
               <a routerLink="/checkout" class="checkout-btn">Proceed to Checkout</a>
@@ -119,8 +124,12 @@ import { ToastService }         from '../../services/toast.service';
     .note { font-size: .68rem; color: var(--text-muted); font-style: italic; margin-bottom: 1.25rem; }
     .checkout-btn { display: block; width: 100%; text-align: center; background: var(--bg-dark); color: #fff; padding: 1rem; text-decoration: none; font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; transition: background .25s; }
     .checkout-btn:hover { background: var(--accent); }
-    .continue-link { display: block; text-align: center; margin-top: 1rem; font-size: .78rem; color: var(--text-muted); text-decoration: none; }
-    .continue-link:hover { color: var(--text); }
+    .continue-link {
+  display: block; text-align: center; margin-top: 1rem;
+  font-size: .78rem; color: var(--text-muted); text-decoration: none;
+  letter-spacing: .1em; text-transform: uppercase; transition: color .2s;
+}
+.continue-link:hover { color: var(--accent); }
 
     /* Skeleton */
     .loading { display: flex; flex-direction: column; gap: 1rem; }
@@ -128,13 +137,38 @@ import { ToastService }         from '../../services/toast.service';
     @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 
     /* Empty */
-    .empty-cart { text-align: center; padding: 5rem 2rem; color: var(--text-muted); }
+    .empty-cart {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 5rem 2rem; gap: 1rem;
+}
+.empty-icon {
+  width: 52px; height: 52px; color: var(--text-muted); opacity: .5;
+  margin-bottom: .5rem; font-size: inherit;
+}
+.empty-icon svg { width: 100%; height: 100%; }
+.empty-cart p { color: var(--text-muted); font-size: .9rem; margin: 0; }
+.cta {
+  display: inline-block; margin-top: .25rem;
+  background: var(--bg-dark); color: #fff; padding: .9rem 2.5rem;
+  text-decoration: none; font-size: .82rem; letter-spacing: .12em;
+  text-transform: uppercase; transition: background .2s;
+}
+.cta:hover { background: var(--accent); }
     .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
     .cta { display: inline-block; margin-top: 1.5rem; background: var(--bg-dark); color: #fff; padding: .85rem 2rem; text-decoration: none; font-size: .82rem; letter-spacing: .1em; transition: background .2s; }
     .cta:hover { background: var(--accent); }
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    @media (max-width: 768px) {
+
+    .total-price { display: inline-block; transition: color .2s; }
+.total-price.bump { animation: priceBump .4s ease both; color: var(--accent); }
+@keyframes priceBump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 768px) {
       .cart-layout { grid-template-columns: 1fr; }
       .cart-item { grid-template-columns: 64px 1fr; row-gap: .75rem; }
     }
@@ -143,15 +177,19 @@ import { ToastService }         from '../../services/toast.service';
 export class CartComponent implements OnInit {
   cart: Cart | null     = null;
   removingId: number | null = null;
+    animating = false; 
 
   constructor(private cartSvc: CartService, private toast: ToastService) {}
 
   ngOnInit(): void {
-    this.cartSvc.cart$.subscribe(c => this.cart = c);
-    this.cartSvc.loadCart().subscribe({
-      error: () => this.toast.error('Could not load your bag. Please refresh.')
-    });
-  }
+  this.cartSvc.cart$.subscribe(c => {
+    if (this.cart && c && c.total !== this.cart.total) {
+      this.animating = true;
+      setTimeout(() => this.animating = false, 400);
+    }
+    this.cart = c;
+  });
+}
 
   inc(productId: number, qty: number): void {
     this.cartSvc.updateQuantity(productId, qty + 1).subscribe({
@@ -177,4 +215,6 @@ export class CartComponent implements OnInit {
   onImgError(e: Event): void {
     (e.target as HTMLImageElement).src = 'https://placehold.co/80x100/f5f5f5/aaa?text=?';
   }
+
+  
 }

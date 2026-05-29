@@ -48,7 +48,7 @@ describe('OrdersComponent', () => {
   });
 
   it('should fetch orders on init', () => {
-    expect(mockOrderSvc.getOrders).toHaveBeenCalledOnce();
+    expect(mockOrderSvc.getOrders).toHaveBeenCalledTimes(1);
   });
 
   it('should display all orders', () => {

@@ -85,48 +85,91 @@ interface ProductForm {
       }
 
       <!-- ── ORDERS TAB ── -->
-      @if (tab() === 'orders') {
-        <section class="tab-content">
-          @if (loadingOrders()) { <p class="loading">Loading orders…</p> }
+      <!-- ── ORDERS TAB ── -->
+@if (tab() === 'orders') {
+  <section class="tab-content">
+    @if (loadingOrders()) { <p class="loading">Loading orders…</p> }
 
-          @if (!loadingOrders() && orders().length === 0) {
-            <p class="empty">No orders yet.</p>
-          }
+    @if (!loadingOrders() && orders().length === 0) {
+      <p class="empty">No orders yet.</p>
+    }
 
-          @if (!loadingOrders() && orders().length > 0) {
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>ID</th><th>Customer</th><th>Total</th>
-                  <th>Items</th><th>Address</th><th>Date</th><th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (o of orders(); track o.id) {
-                  <tr>
-                    <td class="muted">#{{ o.id }}</td>
-                    <td>{{ o.userEmail }}</td>
-                    <td><strong>{{ o.totalPrice | currency:'USD' }}</strong></td>
-                    <td class="muted">{{ o.items.length }} item(s)</td>
-                    <td class="muted">{{ o.shippingAddress | slice:0:30 }}…</td>
-                    <td class="muted">{{ o.createdAt | date:'dd MMM yyyy' }}</td>
-                    <td>
-                      <select class="status-select"
-                              [value]="o.status"
-                              (change)="updateStatus(o, $any($event.target).value)">
-                        <option>Pending</option>
-                        <option>Shipped</option>
-                        <option>Delivered</option>
-                        <option>Cancelled</option>
-                      </select>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
-        </section>
-      }
+    @if (!loadingOrders() && orders().length > 0) {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>ID</th><th>Customer</th><th>Total</th>
+            <th>Items</th><th>Date</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of orders(); track o.id) {
+            <tr class="order-row" (click)="toggleOrder(o.id)">
+              <td class="expand-cell">
+                <span class="expand-icon" [class.open]="expandedOrderId() === o.id">▸</span>
+              </td>
+              <td class="muted">#{{ o.id }}</td>
+              <td>{{ o.userEmail }}</td>
+              <td><strong>{{ o.totalPrice | currency:'USD' }}</strong></td>
+              <td class="muted">{{ o.items.length }} item(s)</td>
+              <td class="muted">{{ o.createdAt | date:'dd MMM yyyy' }}</td>
+              <td (click)="$event.stopPropagation()">
+                <select class="status-select"
+                        [value]="o.status"
+                        (change)="updateStatus(o, $any($event.target).value)">
+                  <option>Pending</option>
+                  <option>Shipped</option>
+                  <option>Delivered</option>
+                  <option>Cancelled</option>
+                </select>
+              </td>
+            </tr>
+
+            <!-- Expanded detail row -->
+            <!-- Expanded detail row -->
+<tr class="detail-row">
+  <td colspan="7">
+    <div class="detail-panel" [class.open]="expandedOrderId() === o.id">
+
+      <div class="detail-section">
+        <h4>Shipping Address</h4>
+        <p>{{ o.shippingAddress }}</p>
+      </div>
+
+      <div class="detail-section">
+        <h4>Items Ordered</h4>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of o.items; track item.productId) {
+              <tr>
+                <td>{{ item.productName }}</td>
+                <td class="muted">× {{ item.quantity }}</td>
+                <td class="muted">{{ item.unitPrice | currency:'USD' }}</td>
+                <td><strong>{{ item.quantity * item.unitPrice | currency:'USD' }}</strong></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </td>
+</tr>
+}         <!-- ← acesta e } de închidere al @for (o of orders()) - PĂSTREAZĂ-L -->
+        </tbody>
+      </table>
+    }
+  </section>
+}
 
       <!-- ── PRODUCTS TAB ── -->
       @if (tab() === 'products') {
@@ -307,12 +350,71 @@ interface ProductForm {
     .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
     .field textarea { resize: vertical; }
     .form-actions { display: flex; gap: .75rem; margin-top: 1rem; }
+.form-actions .btn-outline {
+  padding: .65rem 1.5rem; font-size: .82rem;
+  letter-spacing: .1em; text-transform: uppercase;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.form-actions .btn-outline:hover {
+  border-color: var(--accent); color: var(--accent); background: rgba(197,151,58,.06);
+}
 
     @media (max-width: 768px) {
       .form-grid { grid-template-columns: 1fr; }
       .data-table { font-size: .78rem; }
       .admin-page { padding: 1.5rem 1rem; }
     }
+
+  /* ── Order expand ── */
+.order-row { cursor: pointer; }
+.order-row:hover td { background: rgba(197,151,58,.04); }
+
+.expand-cell { width: 2.5rem; }
+.expand-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem;
+  font-size: 1.4rem; color: var(--text-muted);
+  transition: transform .25s ease, color .25s ease;
+}
+.expand-icon.open { transform: rotate(90deg); color: var(--accent); }
+
+.detail-row td { padding: 0; background: rgba(197,151,58,.03); border-bottom: none; }
+.detail-row:hover td { background: rgba(197,151,58,.03) !important; }
+
+.detail-panel {
+  display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  padding: 0 1.5rem;
+  border-top: 0px solid var(--border);
+  transition: max-height .35s ease, opacity .3s ease, padding .35s ease, border-width .1s ease;
+}
+.detail-panel.open {
+  max-height: 600px;
+  opacity: 1;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.detail-section h4 {
+  font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: .6rem;
+}
+.detail-section p { font-size: .875rem; line-height: 1.6; color: var(--text); }
+
+.items-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.items-table th {
+  text-align: left; font-size: .68rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-muted);
+  padding: .35rem .6rem; border-bottom: 1px solid var(--border);
+}
+.items-table td { padding: .5rem .6rem; border-bottom: 1px solid var(--border); }
+.items-table tr:last-child td { border-bottom: none; }
+
+@media (max-width: 768px) {
+  .detail-panel { grid-template-columns: 1fr; gap: 1.25rem; }
+}
   `]
 })
 export class AdminComponent implements OnInit {
@@ -326,6 +428,7 @@ export class AdminComponent implements OnInit {
   loadingOrders    = signal(false);
   loadingProducts  = signal(false);
   editingProduct   = signal<any>(null);
+  expandedOrderId  = signal<number | null>(null);   // ← AICI
 
   form: ProductForm = this.emptyForm();
 
@@ -383,6 +486,11 @@ export class AdminComponent implements OnInit {
       error: () => this.toast.error('Status update failed.')
     });
   }
+
+  // ← AICI, după updateStatus
+toggleOrder(id: number): void {
+  this.expandedOrderId.set(this.expandedOrderId() === id ? null : id);
+}
 
   // ── Products ───────────────────────────────────────────────────────────────
   loadProducts(): void {

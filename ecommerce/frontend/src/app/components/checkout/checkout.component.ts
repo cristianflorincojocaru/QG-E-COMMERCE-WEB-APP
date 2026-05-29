@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule }               from '@angular/common';
 import { FormsModule }                from '@angular/forms';
 import { RouterLink }                 from '@angular/router';
@@ -53,13 +53,20 @@ import { Order, Cart }                from '../../models/models';
     @if (!placedOrder()) {
       <div class="checkout-page">
         <div class="checkout-inner">
-          <h1 class="page-title">Checkout</h1>
+          @if (cart && cart.items.length > 0) { <h1 class="page-title">Checkout</h1> }
+@if (!cart || cart.items.length === 0) { <h1 class="page-title">Checkout</h1> }
 
           @if (!cart || cart.items.length === 0) {
             <div class="empty">
-              <p>Your bag is empty.</p>
-              <a routerLink="/products" class="btn-dark">Go Shopping</a>
-            </div>
+  <div class="empty-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+      <circle cx="12" cy="12" r="10"/>
+      <circle cx="12" cy="12" r="4"/>
+    </svg>
+  </div>
+  <p>Your bag is empty.</p>
+  <a routerLink="/products" class="btn-dark">Start Shopping</a>
+</div>
           }
 
           @if (cart && cart.items.length > 0) {
@@ -290,7 +297,20 @@ import { Order, Cart }                from '../../models/models';
     }
     .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 
-    .empty { text-align: center; padding: 5rem 2rem; color: var(--text-muted); }
+    .empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 5rem 2rem; gap: 1rem;
+}
+.empty-icon {
+  width: 52px; height: 52px; color: var(--text-muted); opacity: .5;
+  margin-bottom: .5rem;
+}
+.empty-icon svg { width: 100%; height: 100%; }
+.empty p { color: var(--text-muted); font-size: .9rem; margin: 0; }
+.empty .btn-dark {
+  margin-top: .25rem; padding: .9rem 2.5rem;
+  font-size: .82rem; letter-spacing: .12em;
+}
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 768px) {
@@ -300,7 +320,7 @@ import { Order, Cart }                from '../../models/models';
     }
   `]
 })
-export class CheckoutComponent implements OnInit {
+export class CheckoutComponent {
   cart: Cart | null = null;
   placedOrder       = signal<Order | null>(null);
   loading           = signal(false);
@@ -315,9 +335,8 @@ export class CheckoutComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.cartSvc.cart$.subscribe(c => this.cart = c);
-    this.cartSvc.loadCart().subscribe();
-  }
+  this.cartSvc.cart$.subscribe(c => this.cart = c);
+}
 
   placeOrder(): void {
     if (!this.firstName || !this.street || !this.city || !this.country) return;
