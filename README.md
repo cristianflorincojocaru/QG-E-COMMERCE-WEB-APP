@@ -1,1 +1,372 @@
 # QG-E-COMMERCE-WEB-APP
+
+# LuxeCart | Angular 17 · ASP.NET Core 10 · MS SQL
+
+<div align="center">
+
+**🛍️ A full-stack e-commerce vertical slice built for the Quest Global hiring exercise**
+
+![Angular](https://img.shields.io/badge/Angular-17-DD0031?style=for-the-badge&logo=angular)
+![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-10-512BD4?style=for-the-badge&logo=dotnet)
+![MS SQL](https://img.shields.io/badge/MS%20SQL%20Server-Database-CC2927?style=for-the-badge&logo=microsoftsqlserver)
+![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker)
+
+</div>
+
+---
+
+## OVERVIEW
+
+**LuxeCart** is a production-quality e-commerce platform implementing a full vertical slice — from database to UI — covering product browsing, cart management, checkout, order history, and a complete admin back-office. Built against the [Automation Exercise](https://automationexercise.com) API specification.
+
+### Design Language
+
+Minimalist luxury aesthetic: warm off-white backgrounds, charcoal text, amber-gold accents (`#C5973A`), Playfair Display display font paired with DM Sans body copy. Every interaction has a considered animation — accordion expansions, price bumps, SVG checkmark draws on order confirmation.
+
+---
+
+## ARCHITECTURE
+
+```
+ecommerce/
+├── backend/
+│   ├── ECommerceAPI/
+│   │   ├── Controllers/
+│   │   │   ├── AdminController.cs
+│   │   │   ├── AuthController.cs
+│   │   │   ├── CartOrderControllers.cs
+│   │   │   └── ProductsController.cs
+│   │   ├── Data/
+│   │   │   └── DbContext.cs
+│   │   ├── DTOs/
+│   │   │   └── DTOs.cs
+│   │   ├── Models/
+│   │   │   └── Models.cs
+│   │   ├── Services/
+│   │   │   ├── AuthService.cs
+│   │   │   ├── CartService.cs
+│   │   │   ├── OrderService.cs
+│   │   │   ├── ProductService.cs
+│   │   │   └── SqlHealthCheck.cs
+│   │   ├── logs/
+│   │   ├── appsettings.json
+│   │   ├── Program.cs
+│   │   └── ECommerceAPI.csproj
+│   ├── ECommerceAPI.Tests/
+│   │   ├── AuthServiceTests.cs
+│   │   └── OrderServiceTests.cs
+│   └── Dockerfile
+│
+├── frontend/
+│   └── src/app/
+│       ├── components/
+│       │   ├── admin/
+│       │   ├── cart/
+│       │   ├── checkout/
+│       │   ├── login/
+│       │   ├── navbar/
+│       │   ├── not-found/
+│       │   ├── orders/
+│       │   ├── product-list/
+│       │   ├── register/
+│       │   └── toast/
+│       ├── models/
+│       │   └── models.ts
+│       └── services/
+│           ├── auth.service.ts
+│           ├── cart.service.ts
+│           ├── product-order.service.ts
+│           └── toast.service.ts
+│
+├── docker-compose.yml
+└── .github/
+    └── workflows/
+        └── ci.yml
+```
+
+---
+
+## TECH STACK
+
+| Layer | Technology |
+|---|---|
+| Frontend | Angular 17 (standalone components, Signals, RxJS) |
+| Backend | ASP.NET Core (.NET 10) |
+| Database | Microsoft SQL Server |
+| ORM | Raw ADO.NET — no ORM (per exercise requirements) |
+| Auth | JWT Bearer tokens + BCrypt password hashing |
+| Logging | Serilog (structured, file + console sinks) |
+| API Docs | Swagger / OpenAPI with JWT authorization support |
+| Testing (BE) | xUnit + Moq + FluentAssertions |
+| Testing (FE) | Jasmine + Karma |
+| Containerization | Docker + Docker Compose |
+| CI | GitHub Actions |
+
+---
+
+## FEATURES
+
+### 🔐 Authentication
+- Register / Login with BCrypt-hashed passwords
+- JWT Bearer tokens stored in `localStorage`
+- Global HTTP interceptor attaches tokens to every request
+- Rate limiting on `/api/auth/login` — 5 attempts per IP per minute (429 Too Many Requests)
+- Angular Signals for reactive auth state across the app
+
+### 🛍️ Shop
+- Paginated product listing with search and category filtering
+- Debounced search input (no request spam)
+- Add to cart with animated navbar badge pop
+
+### 🛒 Cart
+- Real-time quantity controls (+ / −) with optimistic UI
+- Price bump animation on total when quantity changes
+- Skeleton loading state on first load
+- `BehaviorSubject` for shared state — single `loadCart()` call at app init, all components subscribe
+
+### ✅ Checkout
+- Multi-field shipping form with inline validation
+- Server-side total verification (client only sends address)
+- Animated SVG checkmark on order confirmation
+- Order summary sidebar with sticky positioning
+
+### 📦 Orders
+- Full order history with expandable accordion rows
+- Smooth `max-height` CSS transition for open/close animation
+- Items table with unit price, quantity, subtotal per line
+- Full shipping address display
+- Status badges (Pending / Shipped / Delivered / Cancelled)
+
+### 🔧 Admin Dashboard
+- **Users tab** — role toggle (Customer ↔ Admin), delete (protected account cannot be deleted)
+- **Orders tab** — expandable order details, inline status dropdown
+- **Products tab** — full CRUD with add/edit form, low-stock highlight
+- Tab animations with underline indicator
+
+### 🏥 Health Checks
+- `/health` — full dependency check (SQL Server connectivity)
+- `/health/live` — lightweight liveness probe
+
+### 🚫 404 Page
+- Consistent design with decorative floating shapes and `fadeUp` animation
+
+---
+
+## DATABASE SCHEMA
+
+### Entities
+
+| Entity | Key Fields |
+|---|---|
+| `Users` | `Id`, `FirstName`, `LastName`, `Email`, `PasswordHash`, `Role`, `CreatedAt` |
+| `Products` | `Id`, `Name`, `Description`, `Price`, `Category`, `ImageUrl`, `Stock` |
+| `Cart` | `Id`, `UserId` |
+| `CartItems` | `Id`, `CartId`, `ProductId`, `Quantity` |
+| `Orders` | `Id`, `UserId`, `TotalPrice`, `ShippingAddress`, `Status`, `CreatedAt` |
+| `OrderItems` | `Id`, `OrderId`, `ProductId`, `Quantity`, `UnitPrice` |
+
+### Relationships
+
+```
+Users ──< Cart ──< CartItems >── Products
+Users ──< Orders ──< OrderItems >── Products
+```
+
+---
+
+## API ENDPOINTS
+
+### Auth
+| Method | Endpoint | Access |
+|---|---|---|
+| POST | `/api/auth/register` | Public |
+| POST | `/api/auth/login` | Public (rate-limited) |
+
+### Products
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/api/products` | Public |
+| GET | `/api/products/categories` | Public |
+| POST | `/api/products` | Admin |
+| PUT | `/api/products/{id}` | Admin |
+| DELETE | `/api/products/{id}` | Admin |
+
+### Cart
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/api/cart` | Customer |
+| POST | `/api/cart` | Customer |
+| PUT | `/api/cart/{productId}` | Customer |
+| DELETE | `/api/cart/{productId}` | Customer |
+
+### Orders
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/api/orders` | Customer |
+| POST | `/api/orders/checkout` | Customer |
+
+### Admin
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/api/admin/users` | Admin |
+| PUT | `/api/admin/users/{id}/role` | Admin |
+| DELETE | `/api/admin/users/{id}` | Admin |
+| GET | `/api/admin/orders` | Admin |
+| PUT | `/api/admin/orders/{id}/status` | Admin |
+
+### Health
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/health` | Public |
+| GET | `/health/live` | Public |
+
+---
+
+## GETTING STARTED
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Node.js 20+](https://nodejs.org) + Angular CLI (`npm i -g @angular/cli`)
+- [SQL Server](https://www.microsoft.com/en-us/sql-server) (or Docker)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) (optional)
+
+---
+
+### Option A — Docker Compose (recommended)
+
+Spins up SQL Server, seeds the database, runs the API, and serves the Angular build via nginx in one command:
+
+```bash
+git clone https://github.com/<your-username>/LuxeCart.git
+cd LuxeCart
+docker-compose up --build
+```
+
+| Service | URL |
+|---|---|
+| Angular frontend | http://localhost:4200 |
+| ASP.NET Core API | http://localhost:5000 |
+| Swagger UI | http://localhost:5000/swagger |
+
+---
+
+### Option B — Manual Setup
+
+**1. Backend**
+
+```bash
+cd ecommerce/backend/ECommerceAPI
+```
+
+Update `appsettings.json` with your SQL Server connection string:
+
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Server=localhost;Database=LuxeCartDb;Trusted_Connection=True;TrustServerCertificate=True;"
+}
+```
+
+Set your JWT secret:
+
+```json
+"Jwt": {
+  "Key": "your-256-bit-secret-here",
+  "Issuer": "LuxeCartAPI",
+  "Audience": "LuxeCartClient"
+}
+```
+
+Run the API (creates and seeds the database on first run):
+
+```bash
+dotnet run
+```
+
+API available at `https://localhost:53157` · Swagger at `/swagger`
+
+**2. Frontend**
+
+```bash
+cd ecommerce/frontend
+npm install
+ng serve
+```
+
+Frontend available at `http://localhost:4200`
+
+---
+
+## RUNNING TESTS
+
+### Backend (xUnit)
+
+```bash
+cd ecommerce/backend
+dotnet test
+```
+
+### Frontend (Jasmine / Karma)
+
+```bash
+cd ecommerce/frontend
+ng test
+```
+
+---
+
+## CI / CD
+
+GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull request to `main`:
+
+1. **Backend** — `dotnet build` + `dotnet test`
+2. **Frontend** — `npm ci` + `ng build` + `ng test --watch=false`
+3. **Docker** — `docker-compose build` verification
+
+---
+
+## DEFAULT CREDENTIALS
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@luxecart.com` | `Admin123!` |
+| Customer | *(register via UI)* | — |
+
+> The admin account is protected — it cannot be deleted or demoted via the UI.
+
+---
+
+## DESIGN PATTERNS
+
+| Pattern | Implementation |
+|---|---|
+| **Raw ADO.NET** | All DB access via parameterized `SqlCommand` — no ORM |
+| **Service Layer** | Business logic in `Services/` — controllers are thin |
+| **BehaviorSubject** | Cart state shared across components via RxJS |
+| **Angular Signals** | Auth state (`isLoggedIn`, `currentUser`, `isAdmin`) |
+| **JWT Interceptor** | Global `HttpInterceptor` attaches Bearer token |
+| **Error Interceptor** | Global handler for 401 / 403 / 429 / 5xx responses |
+| **Rate Limiting** | Per-IP sliding window on login endpoint |
+| **Structured Logging** | Serilog with daily rolling file sink |
+
+---
+
+## PROJECT NOTES
+
+- **No ORM** — all database interactions use raw `SqlDataReader` and parameterized queries as required by the exercise specification
+- **Server-side total** — checkout endpoint recomputes the order total from the database; the client only sends the shipping address
+- **Single `loadCart()` call** — `AppComponent` loads the cart once on init; all components subscribe to the `BehaviorSubject` stream rather than making additional requests
+- **Protected admin account** — `admin@luxecart.com` is excluded from role toggle and delete operations at both API and UI level
+
+---
+
+## LICENSE
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+Built by <strong>Cristian Florin Cojocaru</strong>
+</div>
