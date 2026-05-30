@@ -39,6 +39,8 @@ ecommerce/
 │   │   │   └── DTOs.cs
 │   │   ├── Models/
 │   │   │   └── Models.cs
+│   │   ├── Properties/
+│   │   │   └── launchSettings.json
 │   │   ├── Services/
 │   │   │   ├── AuthService.cs
 │   │   │   ├── CartService.cs
@@ -67,6 +69,11 @@ ecommerce/
 │       │   ├── product-list/
 │       │   ├── register/
 │       │   └── toast/
+│       ├── guards/
+│       │   └── auth.guard.ts
+│       ├── interceptors/
+│       │   ├── jwt.interceptor.ts
+│       │   └── error.interceptor.ts
 │       ├── models/
 │       │   └── models.ts
 │       └── services/
@@ -115,10 +122,11 @@ ecommerce/
 - Add to cart with animated navbar badge pop
 
 ### 🛒 CART
-- Real-time quantity controls (+ / −) with optimistic UI
-- Price bump animation on total when quantity changes
-- Skeleton loading state on first load
-- `BehaviorSubject` for shared state — single `loadCart()` call at app init, all components subscribe
+* Real-time quantity controls (+ / −) with optimistic UI
+* Price bump animation on total when quantity changes
+* Skeleton loading state on first load
+* `BehaviorSubject` for shared state — single `loadCart()` call at app init, all components subscribe
+* Empty state with consistent SVG icon matching the rest of the app
 
 ### ✅ CHECKOUT
 - Multi-field shipping form with inline validation
@@ -127,11 +135,11 @@ ecommerce/
 - Order summary sidebar with sticky positioning
 
 ### 📦 ORDERS
-- Full order history with expandable accordion rows
-- Smooth `max-height` CSS transition for open/close animation
-- Items table with unit price, quantity, subtotal per line
-- Full shipping address display
-- Status badges (Pending / Shipped / Delivered / Cancelled)
+* Full order history with expandable accordion rows
+* Smooth `max-height` CSS transition for open/close animation (both directions)
+* Items table with unit price, quantity, subtotal per line
+* Full shipping address display
+* Status badges (Pending / Shipped / Delivered / Cancelled)
 
 ### 🔧 ADMIN DASHBOARD
 - **Users tab** — role toggle (Customer ↔ Admin), delete (protected account cannot be deleted)
@@ -166,6 +174,9 @@ ecommerce/
 ```
 Users ──< Cart ──< CartItems >── Products
 Users ──< Orders ──< OrderItems >── Products
+
+Products ──< CartItems
+Products ──< OrderItems
 ```
 
 
@@ -279,7 +290,8 @@ Run the API (creates and seeds the database on first run):
 dotnet run
 ```
 
-API available at `https://localhost:53157` · Swagger at `/swagger`
+API available at https://localhost:{port} · Swagger at /swagger
+(port shown in terminal after dotnet run)
 
 **2. FRONTEND**
 
@@ -344,15 +356,16 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull
 | **Error Interceptor** | Global handler for 401 / 403 / 429 / 5xx responses |
 | **Rate Limiting** | Per-IP sliding window on login endpoint |
 | **Structured Logging** | Serilog with daily rolling file sink |
-
+| **Guard** | `AuthGuard` protects routes — redirects unauthenticated users to login |
 
 
 ## PROJECT NOTES
 
-- **No ORM** — all database interactions use raw `SqlDataReader` and parameterized queries as required by the exercise specification
-- **Server-side total** — checkout endpoint recomputes the order total from the database; the client only sends the shipping address
-- **Single `loadCart()` call** — `AppComponent` loads the cart once on init; all components subscribe to the `BehaviorSubject` stream rather than making additional requests
-- **Protected admin account** — `admin@luxecart.com` is excluded from role toggle and delete operations at both API and UI level
+* No ORM — all database interactions use raw `SqlDataReader` and parameterized queries as required by the exercise specification
+* Server-side total — checkout endpoint recomputes the order total from the database; the client only sends the shipping address
+* Single `loadCart()` call — `AppComponent` loads the cart once on init; all components subscribe to the `BehaviorSubject` stream rather than making additional requests
+* Protected admin account — `admin@luxecart.com` is excluded from role toggle and delete operations at both API and UI level
+* Rate limiting — login endpoint enforces a per-IP sliding window; repeated failed attempts return 429 Too Many Requests before lockout
 
 
 
