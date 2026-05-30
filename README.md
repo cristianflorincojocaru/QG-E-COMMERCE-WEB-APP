@@ -337,7 +337,7 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull
 
 | ROLE | EMAIL | PASSWORD |
 |---|---|---|
-| Admin | `admin@luxecart.com` | `Admin123!` |
+| Admin | `admin@luxecart.com` | `Admin@123` |
 | Customer | *(register via UI)* | — |
 
 > The admin account is protected — it cannot be deleted or demoted via the UI.
