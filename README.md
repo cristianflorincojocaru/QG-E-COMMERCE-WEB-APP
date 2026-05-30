@@ -357,12 +357,11 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull
 
 ---
 
+## CONTRIBUTIONS
+
+Project created by **Cristian Florin Cojocaru** (**CSE.3** - **University of Craiova / Faculty of Automatics, Computer Science and Electronics**). Contributions are welcome ! If you have suggestions for improving the code or documentation, please submit a pull request.
+
+
 ## LICENSE
 
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-<div align="center">
-Built by <strong>Cristian Florin Cojocaru</strong>
-</div>
