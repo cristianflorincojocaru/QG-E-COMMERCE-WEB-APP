@@ -1,10 +1,8 @@
-# QG-E-COMMERCE-WEB-APP
-
-# LuxeCart | Angular 17 · ASP.NET Core 10 · MS SQL
+# Quest Global - E-COMMERCE WEB APP
 
 <div align="center">
 
-**🛍️ A full-stack e-commerce vertical slice built for the Quest Global hiring exercise**
+**🛍️ LuxeCart — a full-stack e-commerce vertical slice built with Angular 17 + ASP.NET Core 10 + MS SQL Server for Quest Global.**
 
 ![Angular](https://img.shields.io/badge/Angular-17-DD0031?style=for-the-badge&logo=angular)
 ![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-10-512BD4?style=for-the-badge&logo=dotnet)
@@ -14,7 +12,6 @@
 
 </div>
 
----
 
 ## OVERVIEW
 
