@@ -81,7 +81,6 @@ ecommerce/
         └── ci.yml
 ```
 
----
 
 ## TECH STACK
 
@@ -99,7 +98,7 @@ ecommerce/
 | Containerization | Docker + Docker Compose |
 | CI | GitHub Actions |
 
----
+
 
 ## FEATURES
 
@@ -147,7 +146,7 @@ ecommerce/
 ### 🚫 404 PAGE
 - Consistent design with decorative floating shapes and `fadeUp` animation
 
----
+
 
 ## DATABASE SCHEMA
 
@@ -169,7 +168,7 @@ Users ──< Cart ──< CartItems >── Products
 Users ──< Orders ──< OrderItems >── Products
 ```
 
----
+
 
 ## API ENDPOINTS
 
@@ -217,7 +216,7 @@ Users ──< Orders ──< OrderItems >── Products
 | GET | `/health` | Public |
 | GET | `/health/live` | Public |
 
----
+
 
 ## GETTING STARTED
 
@@ -228,7 +227,7 @@ Users ──< Orders ──< OrderItems >── Products
 - [SQL Server](https://www.microsoft.com/en-us/sql-server) (or Docker)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) (optional)
 
----
+
 
 ### Option A — DOCKER COMPOSE (recommended)
 
@@ -246,7 +245,7 @@ docker-compose up --build
 | ASP.NET Core API | http://localhost:5000 |
 | Swagger UI | http://localhost:5000/swagger |
 
----
+
 
 ### Option B — MANUAL SETUP
 
@@ -292,7 +291,7 @@ ng serve
 
 Frontend available at `http://localhost:4200`
 
----
+
 
 ## RUNNING TESTS
 
@@ -310,7 +309,7 @@ cd ecommerce/frontend
 ng test
 ```
 
----
+
 
 ## CI / CD
 
@@ -320,7 +319,7 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull
 2. **Frontend** — `npm ci` + `ng build` + `ng test --watch=false`
 3. **Docker** — `docker-compose build` verification
 
----
+
 
 ## DEFAULT CREDENTIALS
 
@@ -331,7 +330,7 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull
 
 > The admin account is protected — it cannot be deleted or demoted via the UI.
 
----
+
 
 ## DESIGN PATTERNS
 
@@ -346,7 +345,7 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull
 | **Rate Limiting** | Per-IP sliding window on login endpoint |
 | **Structured Logging** | Serilog with daily rolling file sink |
 
----
+
 
 ## PROJECT NOTES
 
@@ -355,7 +354,7 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull
 - **Single `loadCart()` call** — `AppComponent` loads the cart once on init; all components subscribe to the `BehaviorSubject` stream rather than making additional requests
 - **Protected admin account** — `admin@luxecart.com` is excluded from role toggle and delete operations at both API and UI level
 
----
+
 
 ## CONTRIBUTIONS
 
